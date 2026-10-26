@@ -1,0 +1,20 @@
+# secrets
+.env
+# the pack's data and downloaded models are never committed
+data/
+models/
+# environments and build output
+.venv/
+venv/
+node_modules/
+dist/
+build/
+.next/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
+*.log
+*.db
+*.sqlite
