@@ -1,8 +1,14 @@
 # secrets
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+
 # the pack's data and downloaded models are never committed
 data/
 models/
+
 # environments and build output
 .venv/
 venv/
@@ -10,11 +16,39 @@ node_modules/
 dist/
 build/
 .next/
+out/
+*.egg-info/
+
+# Python caches and test output
 __pycache__/
+*.py[cod]
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 .ipynb_checkpoints/
-.DS_Store
+.coverage
+.coverage.*
+htmlcov/
+
+# downloaded model and library caches
+.cache/
+.huggingface/
+
+# logs, databases and generated files
 *.log
 *.db
 *.sqlite
+*.sqlite3
+*.db-journal
+score.json
+
+# temporary and editor/OS files
+*.zip
+*.tmp
+*.temp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
