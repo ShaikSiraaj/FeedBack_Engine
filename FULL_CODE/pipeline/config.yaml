@@ -1,8 +1,4 @@
-# Relative paths are resolved from this file: FULL_CODE/pipeline/.
-# Organiser data and downloaded models are local only and never committed.
-data_dir: ../data
-models_dir: ../models
-submission_dir: ../../submission
 
-# Reproducibility. Model names and decision thresholds belong here once implemented.
+data_dir: ../db
+models_dir: ../models
 seed: 42
