@@ -2,7 +2,7 @@
 
 Turn messy, multilingual store feedback into a prioritised weekly action list routed to the right owner, and flag emerging store-level issues before they become chain-wide.
 
-> **Repository status:** this commit sets up the project structure for Member 1's feedback classification and routing pipeline. The pipeline modules under `FULL_CODE/pipeline/src/voice_of_store/` are placeholders, and the three required files in `submission/` have not been generated yet. The interfaces and schemas below are fixed by the official R5 problem pack.
+> **Repository status:** Member 1's first TF-IDF / Logistic Regression classification baseline is implemented with reusable inference helpers. Routing, the emerging-issue detector, regional briefs, and the three required files in `submission/` are not implemented/generated yet. The interfaces and schemas below are fixed by the official R5 problem pack.
 
 ## What it does
 
@@ -49,9 +49,10 @@ FULL_CODE/data/
 
 Do not commit these files. `data/` is listed in `.gitignore`, and the same applies to any nested `data/` folder. Do not copy the pack's `evaluate.py`, `baseline/`, `sample_submission/`, or README into the data folder.
 
-### 4. Downloaded models
+### 4. Models
 
-The current skeleton does not download or use a model. If a model is added later:
+Model bundles are written locally under `FULL_CODE/models/` (ignored by git).
+The baseline does not download pretrained models. If one is added later:
 
 - put downloaded model files under `FULL_CODE/models/` (ignored by git);
 - document the exact download command and source in this README;
@@ -62,9 +63,29 @@ The current skeleton does not download or use a model. If a model is added later
 
 Copy `FULL_CODE/.env.example` to `FULL_CODE/.env` and fill in real values locally. Never commit `FULL_CODE/.env`. The committed `FULL_CODE/.env.example` contains dummy placeholders only.
 
-### 6. Run the pipeline
+### 6. Train the classification baseline
 
-The fixed R5 detector/re-run interface is:
+The training command validates the feedback, label, and taxonomy schemas; joins
+training labels to feedback by `feedback_id`; and evaluates three TF-IDF /
+Logistic Regression classifiers (`issue_type_id`, `severity`, and `actionable`).
+It uses a reproducible 80/20 holdout stratified by `issue_type_id`, reports
+accuracy and macro-F1, then fits the saved inference bundle on all labelled
+training rows. Text vectorization is fitted only on the training partition
+during evaluation.
+
+```bash
+uv run --project FULL_CODE/pipeline python -m voice_of_store.train \
+  --config FULL_CODE/pipeline/config.yaml
+```
+
+Taxonomy severity floors are applied to predicted severities at inference.
+The taxonomy's `is_actionable_category` is descriptive metadata, not a hard
+prediction rule: labelled `actionable` values differ from it in the provided
+training data, so actionability is trained as an independent target.
+
+### 7. Detector interface (not implemented yet)
+
+The required R5 detector/re-run interface, once implemented, is:
 
 ```bash
 python FULL_CODE/pipeline/src/voice_of_store/predict.py \
@@ -73,9 +94,9 @@ python FULL_CODE/pipeline/src/voice_of_store/predict.py \
   --out <flags.csv>
 ```
 
-`FULL_CODE/pipeline/src/voice_of_store/predict.py` is the intended entry point. It is currently a placeholder; the full-submission command will be documented here when the pipeline is implemented.
-
-Run it from the project root with the pipeline environment active. After `uv sync --extra dev`, either activate `FULL_CODE/pipeline/.venv` or prefix the command with `uv run --project FULL_CODE/pipeline`.
+`FULL_CODE/pipeline/src/voice_of_store/predict.py` currently provides reusable
+classification inference helpers, not this detector CLI. The interface above
+is documentation only and is not executable yet.
 
 The pipeline must write these exact files into `submission/`:
 
@@ -90,7 +111,8 @@ cd FULL_CODE/pipeline
 uv run pytest
 ```
 
-`FULL_CODE/pipeline/tests/test_core.py` is the test home. It is currently empty; meaningful tests for classification, routing, and detection are still to be written.
+`FULL_CODE/pipeline/tests/test_core.py` contains tests for data validation,
+label validation, feedback joins, missing text, and taxonomy policy floors.
 
 ## Architecture
 
@@ -101,9 +123,9 @@ FULL_CODE/
 │   ├── uv.lock                committed lockfile
 │   ├── config.yaml            relative paths, seed, future thresholds/model names
 │   ├── src/voice_of_store/
-│   │   ├── features.py        feature extraction
-│   │   ├── train.py           training code
-│   │   └── predict.py         entry point: classification + routing + detector CLI
+│   │   ├── features.py        data loading, validation, and text preparation
+│   │   ├── train.py           validation and classifier training
+│   │   └── predict.py         classification inference helpers
 │   └── tests/                 core tests
 ├── api/                       optional HTTP layer (imports pipeline, never the reverse)
 ├── db/                        optional schema/migrations + seed script
@@ -191,7 +213,7 @@ Before zipping, confirm that `data/`, `models/`, `.env`, `.venv/`, `node_modules
 
 ## AI usage
 
-- Runtime AI/LLM usage: none in the current skeleton. No LLM API, agent, or downloaded model is wired in yet.
+- Runtime AI/LLM usage: none. Classification uses the locally trained TF-IDF and Logistic Regression baseline; no LLM API, agent, or downloaded model is wired in.
 - AI coding assistant used for this structure/setup pass: OpenCode.
 - Update this section when the team adds an LLM, embedding model, agent, or external AI API.
 
@@ -200,14 +222,14 @@ Before zipping, confirm that `data/`, `models/`, `.env`, `.venv/`, `node_modules
 - Application code from other projects: none.
 - Code written by the team before Day 1: only this project skeleton.
 - Organiser-provided R5 pack (problem README, `evaluate.py`, `baseline/baseline.py`, sample submission, synthetic data): used locally for development and scoring; not copied into this repository.
-- Third-party libraries: `numpy`, `pandas`, `PyYAML` (runtime); `pytest`, `ruff` (development). Exact versions are locked in `uv.lock`.
+- Third-party libraries: `numpy`, `pandas`, `PyYAML`, `scikit-learn` (runtime); `pytest`, `ruff` (development). Exact versions are locked in `uv.lock`.
 - Data licence: the R5 synthetic data is CC BY 4.0, as stated in the pack. Project code is MIT; see `LICENSE`.
 
 ## Limitations
 
-- The classifier, routing logic, regional brief, and emerging-issue detector are not implemented yet; the modules are placeholders.
+- The TF-IDF / Logistic Regression classifier baseline and reusable inference helpers are implemented. Routing, the regional brief, and emerging-issue detector are not implemented yet.
 - The three required `submission/` files are not generated yet.
-- `FULL_CODE/pipeline/tests/test_core.py` is empty, so the pipeline currently has no meaningful tests.
+- Validation metrics are from a single stratified holdout and are not a substitute for official evaluation.
 - `api/`, `db/`, and `web/` are empty placeholders; no API, database schema, or UI exists.
-- No de-duplication across channels, no precision statement, and no model evaluation have been produced yet.
+- No de-duplication across channels or precision statement has been produced yet.
 - `uv.lock` fixes library versions, but Python 3.9+ compatibility still needs to be tested on the judging machine.
