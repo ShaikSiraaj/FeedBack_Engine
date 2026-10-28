@@ -263,33 +263,6 @@ def detect_flags(feedback, predictions, stores, taxonomy, calendar, as_of):
             how="outer"
         )
 
-    # Missing store/issue/week combinations count as zero when calculating
-    # the baseline over the store's observed history window.
-    if history.empty:
-        historical_counts = pd.DataFrame(
-            columns=["store_id", "issue_type_id", "baseline_count", "previous_count"]
-        )
-        observed_history_weeks = 0
-    else:
-        weekly = (
-            history.groupby(["week_start", "store_id", "issue_type_id"], dropna=True)
-            ["feedback_id"].nunique().rename("count").reset_index()
-        )
-        observed_history_weeks = int(history["week_start"].nunique())
-        baseline = (
-            weekly.groupby(["store_id", "issue_type_id"])["count"]
-            .mean().rename("baseline_count").reset_index()
-        )
-        previous_week_start = history["week_start"].max()
-        previous = (
-            weekly[weekly["week_start"] == previous_week_start]
-            [["store_id", "issue_type_id", "count"]]
-            .rename(columns={"count": "previous_count"})
-        )
-        historical_counts = baseline.merge(
-            previous, on=["store_id", "issue_type_id"], how="outer"
-        )
-
     current_counts = current_counts.merge(
         historical_counts, on=["store_id", "issue_type_id"], how="left"
     )
@@ -315,16 +288,26 @@ def detect_flags(feedback, predictions, stores, taxonomy, calendar, as_of):
         if count < 2:
             continue
 
-        evidence_text = str(row.evidence_text).lower()
         policy_reason = str(getattr(row, "policy_reason", "") or "").lower()
-        severity_values = {
-            str(value).lower() for value in row.predicted_severities
-        }
-        high_risk = (
-            any(term in evidence_text for term in HIGH_RISK_TERMS)
-            or any(term in policy_reason for term in HIGH_RISK_TERMS)
-            or bool(severity_values.intersection({"critical", "high"}))
-        )
+
+        # Evaluate risk at the individual-record level instead of combining
+        # every feedback text in the store/issue group.
+        group_records = current[
+            (current["store_id"] == row.store_id)
+            & (current["issue_type_id"] == row.issue_type_id)
+        ]
+
+        risk_records = group_records[
+            group_records["text_lower"].apply(
+                lambda text: any(term in text for term in HIGH_RISK_TERMS)
+            )
+            | group_records["severity"].fillna("").astype(str).str.lower().isin(
+                ["critical", "high"]
+            )
+        ]
+
+        policy_risk = any(term in policy_reason for term in HIGH_RISK_TERMS)
+        high_risk = not risk_records.empty or policy_risk
 
         baseline = float(row.baseline_count)
         previous_count = float(row.previous_count)
