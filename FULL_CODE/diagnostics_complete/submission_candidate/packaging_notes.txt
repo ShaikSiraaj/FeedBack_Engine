@@ -1,0 +1,11 @@
+R5 packaging requirements (per README)
+=======================================
+Required files inside the final submission folder:
+  submission/R5_predictions.csv
+  submission/R5_emerging_flags.csv
+  submission/detector_cmd.txt
+
+The README specifies a TEAM_ID-001392_R5.zip archive created from a fresh clone, containing the whole clone including .git. It says to exclude data/, models/, .env, .venv/, node_modules/, caches, and build output.
+The candidate files in this diagnostics directory are not final submission files. Do not move or copy them into submission/ until explicitly approved.
+
+README/evaluator discrepancy: README says evaluate.py is not copied into this repository and documents an external <R5_PACK>/evaluate.py invocation. The copied project includes FULL_CODE/evalutor/evalute.py; this local evaluator accepts --flags and --out. Its --submission input is the required predictions CSV, and it checks flags when provided.

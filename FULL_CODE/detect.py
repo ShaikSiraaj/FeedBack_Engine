@@ -6,7 +6,6 @@ import joblib
 import pandas as pd
 import yaml
 
-
 REQUIRED_OUTPUT_COLUMNS = [
     "as_of_week_start",
     "store_id",
@@ -14,6 +13,7 @@ REQUIRED_OUTPUT_COLUMNS = [
     "confidence",
     "evidence_feedback_ids",
 ]
+MAX_FLAGS_PER_WEEK = 3
 
 HIGH_RISK_TERMS = (
     "allergen",
@@ -93,22 +93,21 @@ def detect_flags(feedback, predictions, stores, taxonomy, calendar, as_of):
     feedback = feedback.copy()
     predictions = predictions.copy()
 
-    # Parse timestamps consistently and treat --as-of as an inclusive date.
+    # Parse timestamps consistently and resolve --as-of to its calendar week.
     feedback["created_at"] = pd.to_datetime(
         feedback["created_at"], errors="coerce", utc=True
     ).dt.tz_convert(None)
-    cutoff = pd.Timestamp(as_of).normalize()
-    if cutoff.tzinfo is not None:
-        cutoff = cutoff.tz_convert(None)
-    as_of_end = cutoff + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
+    as_of_date = pd.Timestamp(as_of).normalize()
+    if as_of_date.tzinfo is not None:
+        as_of_date = as_of_date.tz_convert(None)
 
     cal = prepare_calendar(calendar)
     eligible_weeks = cal[
-        (cal["week_start"] <= cutoff) & (cal["week_end"] >= cutoff)
+        (cal["week_start"] <= as_of_date) & (cal["week_end"] >= as_of_date)
     ]
     if eligible_weeks.empty:
         # Fall back to the latest week whose start is not after the as-of date.
-        eligible_weeks = cal[cal["week_start"] <= cutoff]
+        eligible_weeks = cal[cal["week_start"] <= as_of_date]
     if eligible_weeks.empty:
         raise ValueError(
             f"No calendar week starts on or before {as_of}. "
@@ -117,11 +116,12 @@ def detect_flags(feedback, predictions, stores, taxonomy, calendar, as_of):
 
     current_week = eligible_weeks.iloc[-1]
     week_start = current_week["week_start"]
-    week_end = min(current_week["week_end"], cutoff)
+    week_end = current_week["week_end"]
+    week_cutoff = week_end + pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
 
     feedback = feedback[
         feedback["created_at"].notna()
-        & (feedback["created_at"] <= as_of_end)
+        & (feedback["created_at"] <= week_cutoff)
         & feedback["store_id"].notna()
         & feedback["feedback_id"].notna()
     ].copy()
@@ -146,11 +146,11 @@ def detect_flags(feedback, predictions, stores, taxonomy, calendar, as_of):
         feedback.loc[mask, "week_start"] = row.week_start
 
     # Restrict history to weeks ending before the current week, plus the
-    # current week through the requested as-of date.
+    # current week through its Sunday cutoff.
     feedback = feedback.dropna(subset=["week_start"])
     current = feedback[
         (feedback["week_start"] == week_start)
-        & (feedback["created_at"] <= as_of_end)
+        & (feedback["created_at"] <= week_cutoff)
         & (feedback["created_at"].dt.normalize() <= week_end)
     ].copy()
 
@@ -196,8 +196,6 @@ def detect_flags(feedback, predictions, stores, taxonomy, calendar, as_of):
         .reset_index()
     )
 
-    # Build historical weekly counts, then average the prior available weeks.
-    
     # Build historical weekly counts, including zero-report weeks.
     history_week_starts = (
         cal.loc[cal["week_start"] < week_start, "week_start"]
@@ -346,7 +344,7 @@ def detect_flags(feedback, predictions, stores, taxonomy, calendar, as_of):
             "store_id": row.store_id,
             "issue_type_id": row.issue_type_id,
             "confidence": confidence,
-            "evidence_feedback_ids": "|".join(evidence_ids),
+            "evidence_feedback_ids": ";".join(evidence_ids),
             "_high_risk": high_risk,
             "_count": count,
             "_footfall_rate": round(footfall_rate, 4),
@@ -362,7 +360,8 @@ def detect_flags(feedback, predictions, stores, taxonomy, calendar, as_of):
     output = output.sort_values(
         ["_high_risk", "_increased", "_footfall_rate", "_count", "confidence"],
         ascending=[False, False, False, False, False],
-    )
+        kind="mergesort",
+    ).head(MAX_FLAGS_PER_WEEK)
     return output[REQUIRED_OUTPUT_COLUMNS]
 
 

@@ -1,0 +1,58 @@
+R5 submission candidate validation report
+=========================================
+Candidate directory: C:\Users\TEJOSH\Ap\FeedBack_Engine\FULL_CODE\diagnostics_complete\submission_candidate
+Candidate flags: 78
+Candidate predictions: 39769 rows
+Evaluation weeks processed: 26/26
+Evidence citations: 268 valid, 0 invalid
+Official evaluator (public evidence checks): 39 valid and 0 rejected among 39 scored flags; 39 flags are outside the public train half and not scored here.
+Primary score: 0.766124
+Classification score: 0.943540
+Lead score: 0.500000
+
+Flags per evaluator week:
+  2026-03-30: 3
+  2026-04-06: 3
+  2026-04-13: 3
+  2026-04-20: 3
+  2026-04-27: 3
+  2026-05-04: 3
+  2026-05-11: 3
+  2026-05-18: 3
+  2026-05-25: 3
+  2026-06-01: 3
+  2026-06-08: 3
+  2026-06-15: 3
+  2026-06-22: 3
+  2026-06-29: 3
+  2026-07-06: 3
+  2026-07-13: 3
+  2026-07-20: 3
+  2026-07-27: 3
+  2026-08-03: 3
+  2026-08-10: 3
+  2026-08-17: 3
+  2026-08-24: 3
+  2026-08-31: 3
+  2026-09-07: 3
+  2026-09-14: 3
+  2026-09-21: 3
+
+Validation failures: none.
+PASS: Candidate prediction and flag CSV headers match required exact columns and ordering.
+PASS: Canonical detector CLI executed for all 26 official calendar weeks.
+PASS: Candidate flag week values are within the official 26-week range.
+PASS: No week exceeds three flags.
+PASS: Evidence uses semicolon separators with at least two distinct IDs per flag.
+PASS: Every evidence citation exists in feedback.csv and matches the flagged store, week, and candidate predicted issue type.
+PASS: No duplicate (week, store, issue_type) flags.
+PASS: Official evaluator accepted the candidate submission and wrote its JSON score.
+
+Interpretation/limitations:
+- The public evaluator checks evidence issue type against this candidate R5_predictions.csv.
+- Its code switches to true issue types only in organiser mode when all_records_latent.csv is available; that file is not present here.
+- Hidden true-label evidence validity and hidden-test scores therefore remain unknown; no hidden-test validity is claimed.
+- The public evaluator scored only the first 13 weeks because the public incident truth is in that half. Flags in weeks 14-26 were generated and structurally validated but are not scored by this public run.
+- The README says the official evaluator is not copied into the repository, but this copied project contains FULL_CODE/evalutor/evalute.py. The README invocation points to an external <R5_PACK>/evaluate.py; this run used the local evaluator with explicit --flags and --out.
+- README detector_cmd.txt contract specifies the uv command template. That project venv could not load its SciPy extension because Windows Application Control blocked the DLL; generation used the installed system Python to invoke the same canonical FULL_CODE/detect.py CLI. The exact 26 commands actually run are in candidate_generation_commands.txt.
+- Existing submission artifacts were not modified, and this candidate was not copied into the final submission directory.

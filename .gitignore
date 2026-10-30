@@ -41,6 +41,7 @@ htmlcov/
 *.sqlite3
 *.db-journal
 score.json
+FULL_CODE/pipeline/benchmark-results/
 
 # temporary and editor/OS files
 *.zip

@@ -5,6 +5,7 @@ from typing import Any
 import pandas as pd
 
 from voice_of_store.features import SEVERITY_RANK, normalize_text, validate_feedback
+from voice_of_store.policy_rules import apply_explicit_policy_rules
 
 
 def apply_policy_severity_floor(
@@ -26,9 +27,7 @@ def apply_policy_severity_floor(
     return pd.Series(adjusted, index=severities.index, name=severities.name)
 
 
-def predict_records(
-    feedback: pd.DataFrame, model_bundle: dict[str, Any]
-) -> pd.DataFrame:
+def predict_records(feedback: pd.DataFrame, model_bundle: dict[str, Any]) -> pd.DataFrame:
     """Predict the three targets and enforce taxonomy severity floors."""
     validate_feedback(feedback)
     models = model_bundle["models"]
@@ -41,6 +40,7 @@ def predict_records(
             "actionable": models["actionable"].predict(text).astype(int),
         }
     )
+    predictions["issue_type_id"] = apply_explicit_policy_rules(text, predictions["issue_type_id"])
     predictions["severity"] = apply_policy_severity_floor(
         predictions["issue_type_id"],
         predictions["severity"],
