@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Issue detail · StorePulse{% endblock %}
+
+{% block content %}
+<a class="text-link back-link" href="{{ url_for('emerging_page') }}">← All emerging issues</a>
+<div class="page-heading issue-detail-heading">
+    <div>
+        <div class="eyebrow">EMERGING STORE SIGNAL</div>
+        <h1>{{ flag.issue_type or flag.issue_type_id }}</h1>
+        <p class="subtitle">{{ flag.description or "Detector-generated issue flag." }}</p>
+    </div>
+    <span class="confidence-pill">{{ (flag.confidence * 100)|round|int }}% confidence</span>
+</div>
+
+<div class="detail-grid">
+    <article class="metric-card">
+        <div class="metric-top"><span>Store</span><span class="metric-icon">⌖</span></div>
+        <div class="detail-value">{{ flag.store_name or flag.store_id }}</div>
+        <div class="metric-foot">{{ flag.city or "" }}{% if flag.region %} · {{ flag.region }}{% endif %}</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-top"><span>Owner function</span><span class="metric-icon">↗</span></div>
+        <div class="detail-value">{{ flag.owner_function or "Unassigned" }}</div>
+        <div class="metric-foot">Recommended team to review this signal</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-top"><span>Evidence</span><span class="metric-icon warning">▤</span></div>
+        <div class="detail-value">{{ evidence|length }}</div>
+        <div class="metric-foot">Original feedback records</div>
+    </article>
+</div>
+
+<div class="section-heading section-gap">
+    <div><h2>Supporting feedback</h2><p>Original records used by the detector; source text is unchanged.</p></div>
+</div>
+<div class="panel table-panel">
+    <div class="table-scroll">
+        <table>
+            <thead><tr><th>FEEDBACK</th><th>DATE</th><th>CHANNEL</th><th>STORE</th></tr></thead>
+            <tbody>
+            {% for item in evidence %}
+            <tr>
+                <td class="feedback-cell">{{ item.text or "No text provided" }}</td>
+                <td>{% if item.created_at %}{{ item.created_at.strftime("%b %d, %Y") }}{% else %}—{% endif %}</td>
+                <td>{{ item.channel|replace("_", " ")|title }}</td>
+                <td>{{ item.store_name or item.store_id }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="empty-state">No matching evidence records were found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}StorePulse Intelligence{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <a class="brand" href="/">
+                <span class="brand-mark">S</span>
+                <span>StorePulse</span>
+            </a>
+
+            <div class="sidebar-label">WORKSPACE</div>
+            <nav>
+                <a href="{{ url_for('reports_page') }}" class="{% if request.path == '/' or request.path == '/reports' %}active{% endif %}">◈ &nbsp; Weekly Brief</a>
+                <a href="{{ url_for('feedback_page') }}" class="{% if request.path == '/feedback' %}active{% endif %}">▤ &nbsp; Feedback Inbox</a>
+                <a href="{{ url_for('emerging_page') }}" class="{% if request.path.startswith('/emerging') or request.path.startswith('/issue/') %}active{% endif %}">⌁ &nbsp; Emerging Issues</a>
+                <a href="{{ url_for('data_page') }}" class="{% if request.path.startswith('/data') %}active{% endif %}">⇧ &nbsp; Add Data</a>
+            </nav>
+
+            <div class="sidebar-status">
+                <span class="status-dot"></span>
+                R5 Engine · Model connected
+            </div>
+        </aside>
+
+        <main class="main-area">
+            <header class="topbar">
+                <div>
+                    <div class="topbar-title">StorePulse Intelligence</div>
+                    <div class="topbar-subtitle">Retail feedback, translated into action</div>
+                </div>
+                <div class="topbar-actions">
+                    <form class="region-picker" method="get" action="{{ url_for('set_region') }}">
+                        <label for="workspace-region">REGION</label>
+                        <select id="workspace-region" name="region" onchange="this.form.submit()">
+                            {% for region in workspace_regions %}
+                            <option value="{{ region }}" {% if current_region == region %}selected{% endif %}>{{ region }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="next" value="{{ request.full_path }}">
+                    </form>
+                    <span class="topbar-subtitle"><span class="status-dot"></span> Local data</span>
+                </div>
+            </header>
+
+            <section class="page-content">
+                {% block content %}{% endblock %}
+            </section>
+
+            <footer>STOREPULSE INTELLIGENCE · Turning store feedback into action</footer>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

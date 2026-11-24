@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Feedback Explorer · StorePulse{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">CUSTOMER & TEAM VOICE</div>
+        <h1>Feedback <span>inbox</span></h1>
+        <p class="subtitle">Search and triage real feedback by region, store, channel, issue, severity, and actionability.</p>
+    </div>
+</div>
+
+<section class="panel filter-panel">
+    <form class="filter-form" method="get" action="{{ url_for('feedback_page') }}">
+        <label class="filter-search">
+            <span>Search feedback</span>
+            <input type="search" name="search" value="{{ selected.search }}" placeholder="Search feedback or ID">
+        </label>
+        <label>
+            <span>Channel</span>
+            <select name="channel">
+                <option value="">All channels</option>
+                {% for channel in filters.channels %}
+                <option value="{{ channel }}" {% if selected.channel == channel %}selected{% endif %}>{{ channel|replace("_", " ")|title }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Store</span>
+            <select name="store_id">
+                <option value="">All stores</option>
+                {% for store in filters.stores %}
+                <option value="{{ store.store_id }}" {% if selected.store_id == store.store_id|string %}selected{% endif %}>{{ store.store_name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Severity</span>
+            <select name="severity">
+                <option value="">All severities</option>
+                {% for severity in filters.severities %}
+                <option value="{{ severity }}" {% if selected.severity == severity %}selected{% endif %}>{{ severity|title }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Actionability</span>
+            <select name="actionable">
+                <option value="">All feedback</option>
+                <option value="1" {% if selected.actionable == "1" %}selected{% endif %}>Actionable</option>
+                <option value="0" {% if selected.actionable == "0" %}selected{% endif %}>Not actionable</option>
+            </select>
+        </label>
+        <label>
+            <span>Issue type</span>
+            <select name="issue_type_id">
+                <option value="">All issue types</option>
+                {% for issue in filters.issues %}
+                <option value="{{ issue.issue_type_id }}" {% if selected.issue_type_id == issue.issue_type_id %}selected{% endif %}>{{ issue.issue_type }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+        <button class="button button-primary" type="submit">Apply filters</button>
+    </form>
+</section>
+
+<section class="panel translation-panel" aria-labelledby="translation-heading">
+    <div class="translation-intro">
+        <div>
+            <div class="eyebrow">PRIVATE BY DESIGN</div>
+            <h2 id="translation-heading">Translate feedback</h2>
+            <p>Translation runs locally and shows only the translated text. Choose a supported source and target above. Emojis are retained; Marathi is not installed, and Hindi input must use Devanagari.</p>
+        </div>
+        <span class="local-badge"><span class="status-dot"></span> On-device NLP</span>
+    </div>
+    <div class="translation-controls">
+        <label>
+            <span>From</span>
+            <select id="translation-source" disabled><option>Loading local languages…</option></select>
+        </label>
+        <span class="translation-arrow" aria-hidden="true">→</span>
+        <label>
+            <span>To</span>
+            <select id="translation-target" disabled><option>Loading local languages…</option></select>
+        </label>
+        <p id="translation-status" class="translation-status" role="status" aria-live="polite"></p>
+    </div>
+</section>
+
+<div class="section-heading section-gap">
+    <div>
+        <h2>Feedback records</h2>
+        <p>{{ "{:,}".format(total) }} matching records · model predictions shown alongside the original text</p>
+    </div>
+</div>
+
+<div class="panel table-panel">
+    <div class="table-scroll">
+        <table class="feedback-table">
+            <thead>
+                <tr>
+                    <th>FEEDBACK</th>
+                    <th>STORE</th>
+                    <th>ISSUE & OWNER</th>
+                    <th>SEVERITY</th>
+                    <th>ACTIONABLE</th>
+                    <th>OWNER</th>
+                    <th>CHANNEL</th>
+                    <th>TRANSLATION</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for item in records %}
+                <tr data-feedback-text="{{ item.text or '' }}">
+                    <td class="feedback-cell">
+                        <div class="feedback-id">{{ item.feedback_id }}</div>
+                        <div>{{ item.text or "No text provided" }}</div>
+                        <div class="feedback-meta">
+                            {% if item.created_at %}{{ item.created_at.strftime("%b %d, %Y") }}{% endif %}
+                            {% if item.rating is not none %} · Rating {{ item.rating }}{% endif %}
+                        </div>
+                        <div class="translation-result" role="status" aria-live="polite"></div>
+                    </td>
+                    <td>{{ item.store_name or item.store_id or "—" }}{% if item.region %}<span class="cell-subtitle">{{ item.region }}</span>{% endif %}</td>
+                    <td>{{ item.issue_type or item.issue_type_id }}<span class="cell-subtitle">{{ item.owner_function or "Unassigned" }}</span></td>
+                    <td><span class="pill {{ item.severity }}">{{ item.severity|title }}</span></td>
+                    <td>
+                        {% if item.actionable is not none %}
+                        <span class="actionable-pill {{ 'yes' if item.actionable|int else 'no' }}">{{ "Yes" if item.actionable|int else "No" }}</span>
+                        {% else %}
+                        <span class="cell-subtitle">Not available</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.owner_function or "Unassigned" }}</td>
+                    <td>{{ item.channel|replace("_", " ")|title }}</td>
+                    <td><button class="button button-secondary translate-button" type="button">Translate</button></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="8" class="empty-state">No feedback matches these filters.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="pagination-row">
+    <span>Page {{ page }} of {{ total_pages }}</span>
+    <form class="pagination-controls" method="get" action="{{ url_for('feedback_page') }}">
+        {% for key, value in selected.items() %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endfor %}
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+        <button class="button button-secondary" name="page" value="{{ page - 1 }}" {% if page <= 1 %}disabled{% endif %}>Previous</button>
+        <button class="button button-secondary" name="page" value="{{ page + 1 }}" {% if page >= total_pages %}disabled{% endif %}>Next</button>
+    </form>
+</div>
+{% endblock %}

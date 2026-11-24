@@ -1,0 +1,105 @@
+﻿{% extends "base.html" %}
+{% block title %}Weekly Brief · StorePulse{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">YOUR RETAIL NETWORK</div>
+        <h1>Know what’s happening <span>in every store.</span></h1>
+        <p class="subtitle">One view of customer feedback, emerging signals, and the actions that matter.</p>
+    </div>
+    <div class="heading-actions">
+        <a class="button button-secondary" href="{{ url_for('reports_page') }}">Weekly reports</a>
+        <a class="button button-primary" href="{{ url_for('feedback_page') }}">Explore feedback <span aria-hidden="true">→</span></a>
+    </div>
+</div>
+
+<div class="section-heading">
+    <div><h2>Network overview</h2><p>Signals across your retail operation</p></div>
+    <span class="data-tag">LIVE DATA</span>
+</div>
+
+<div class="metric-grid">
+    <article class="metric-card">
+        <div class="metric-top"><span>Total feedback</span><span class="metric-icon">✳</span></div>
+        <div class="metric-value">{{ "{:,}".format(overview.total_feedback) }}</div>
+        <div class="metric-foot">Records analyzed by R5</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-top"><span>Stores covered</span><span class="metric-icon">⌖</span></div>
+        <div class="metric-value">{{ overview.number_of_stores }}</div>
+        <div class="metric-foot">Across the store network</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-top"><span>Emerging alerts</span><span class="metric-icon warning">⌁</span></div>
+        <div class="metric-value">{{ overview.emerging_issues }}</div>
+        <div class="metric-foot">Detector-generated flags</div>
+    </article>
+    <article class="metric-card">
+        <div class="metric-top"><span>High-risk alerts</span><span class="metric-icon danger">!</span></div>
+        <div class="metric-value">{{ overview.high_risk_alerts }}</div>
+        <div class="metric-foot">High / critical taxonomy floors</div>
+    </article>
+</div>
+
+<div class="section-heading section-gap">
+    <div><h2>What people are talking about</h2><p>Most frequent model-predicted issue categories</p></div>
+</div>
+
+<div class="content-grid">
+    <article class="panel">
+        <div class="panel-heading"><h3>Top issue categories</h3><span>TOP 8</span></div>
+        {% set max_count = issue_counts.values()|list|max if issue_counts else 1 %}
+        <div class="bar-list">
+            {% for name, count in issue_counts.items() %}
+            <div class="bar-item">
+                <div class="bar-label"><span>{{ name }}</span><strong>{{ "{:,}".format(count) }}</strong></div>
+                <div class="bar-track"><div class="bar-fill" style="width: {{ (count / max_count * 100)|round }}%"></div></div>
+            </div>
+            {% else %}
+            <p class="empty-state">No issue data available.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-heading"><h3>Predicted severity mix</h3><span>ALL FEEDBACK</span></div>
+        {% for severity in ["critical", "high", "medium", "low"] %}
+        {% set count = severity_counts.get(severity, 0) %}
+        <div class="severity-row">
+            <span class="severity-dot {{ severity }}"></span>
+            <span class="severity-name">{{ severity|title }}</span>
+            <strong>{{ "{:,}".format(count) }}</strong>
+            <span class="severity-share">{{ (count / overview.total_feedback * 100)|round(1) if overview.total_feedback else 0 }}%</span>
+        </div>
+        {% endfor %}
+        <p class="panel-note">Severity is model-predicted and adjusted by taxonomy policy floors.</p>
+    </article>
+</div>
+
+<div class="section-heading section-gap">
+    <div><h2>Recent feedback</h2><p>Latest records from your feedback stream</p></div>
+    <a class="text-link" href="{{ url_for('feedback_page') }}">View all feedback →</a>
+</div>
+
+<div class="panel table-panel">
+    <div class="table-scroll">
+        <table>
+            <thead><tr><th>FEEDBACK</th><th>STORE</th><th>ISSUE</th><th>SEVERITY</th><th>CHANNEL</th></tr></thead>
+            <tbody>
+            {% for item in recent_feedback %}
+            <tr>
+                <td class="feedback-cell">{{ item.text[:105] }}{% if item.text|length > 105 %}…{% endif %}</td>
+                <td>{{ item.store_name or item.store_id }}</td>
+                <td>{{ item.issue_type }}</td>
+                <td><span class="pill {{ item.severity }}">{{ item.severity|title }}</span></td>
+                <td>{{ item.channel|replace("_", " ")|title }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="empty-state">No feedback records found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

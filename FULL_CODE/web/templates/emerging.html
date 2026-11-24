@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Emerging Issues · StorePulse{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">EARLY WARNING & TRIAGE</div>
+        <h1>Emerging <span>issues</span></h1>
+        <p class="subtitle">Review detector alerts and store-level trends, then track each issue from new through investigation to archive.</p>
+    </div>
+</div>
+
+<section class="panel filter-panel">
+    <form class="filter-form issue-filter-form" method="get" action="{{ url_for('emerging_page') }}">
+        <label>
+            <span>Reporting week</span>
+            <select name="week">
+                {% for week in weeks %}
+                <option value="{{ week.week_index }}" {% if selected.week|string == week.week_index|string %}selected{% endif %}>
+                    Week {{ week.week_index }} · {{ week.week_start }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Status</span>
+            <select name="status">
+                {% for status in ["all", "new", "investigating", "archived"] %}
+                <option value="{{ status }}" {% if selected.status == status %}selected{% endif %}>{{ status|title }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button class="button button-primary" type="submit">Apply filters</button>
+    </form>
+</section>
+
+{% if error %}
+<div class="panel report-error" role="alert"><strong>Issues unavailable</strong><p>{{ error }}</p></div>
+{% endif %}
+
+<div class="section-heading">
+    <div><h2>{{ records|length }} signals to review</h2><p>Selected region: {{ selected.region }} · Status changes are saved locally.</p></div>
+</div>
+
+<div class="issue-grid">
+    {% for item in records %}
+    <article class="issue-card managed-issue-card" data-issue-key="{{ item.issue_key }}" data-current-status="{{ item.status }}">
+        <div class="issue-card-top">
+            <span class="issue-store">{{ item.store_name }}</span>
+            <span class="confidence-pill">{{ (item.confidence * 100)|round|int }}% confidence</span>
+        </div>
+        <div class="issue-source">{{ item.source }} · Week {{ item.week_index }}</div>
+        <h2>{{ item.issue_type }}</h2>
+        <p>{{ item.description or "A recurring store-level signal needs review." }}</p>
+        <div class="issue-card-footer">
+            <span>{{ item.owner_function }} · {{ item.evidence_count }} records</span>
+            <span class="issue-status-badge {{ item.status }}">{{ item.status|title }}</span>
+        </div>
+        <label class="issue-status-control">
+            <span>Update status</span>
+            <select class="issue-status-select" aria-label="Status for {{ item.issue_type }}">
+                {% for status in ["new", "investigating", "archived"] %}
+                <option value="{{ status }}" {% if item.status == status %}selected{% endif %}>{{ status|title }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <p class="issue-status-message" role="status" aria-live="polite"></p>
+        {% if item.evidence_feedback_ids and item.flag_index is defined and item.flag_index is not none %}
+        <a class="text-link issue-evidence-link" href="{{ url_for('issue_detail', flag_index=item.flag_index) }}">View supporting feedback →</a>
+        {% elif item.evidence_feedback_ids %}
+        <a class="text-link issue-evidence-link" href="{{ url_for('report_issue_detail', week_index=item.week_index, region=selected.region, store_id=item.store_id, issue_type_id=item.issue_type_id) }}">View supporting feedback →</a>
+        {% endif %}
+    </article>
+    {% else %}
+    <div class="panel empty-panel">
+        <div class="empty-icon">✓</div>
+        <h2>No issues in this view</h2>
+        <p>There are no detector or trend flags for this week, region, and status selection.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Weekly Reports · StorePulse{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">REGIONAL PERFORMANCE BRIEF</div>
+        <h1>Weekly <span>reports</span></h1>
+        <p class="subtitle">Choose a completed calendar week and region to review the data-backed brief or download it as a PDF.</p>
+    </div>
+</div>
+
+<section class="panel report-filter-panel">
+    <form class="report-filter-form" method="get" action="{{ url_for('reports_page') }}">
+        <label>
+            <span>Reporting week</span>
+            <select name="week">
+                {% for week in options.weeks %}
+                <option value="{{ week.week_index }}" {% if selected.week|string == week.week_index|string %}selected{% endif %}>
+                    Week {{ week.week_index }} · {{ week.week_start }} – {{ week.week_end }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Region</span>
+            <select name="region">
+                {% for region in options.regions %}
+                <option value="{{ region }}" {% if selected.region == region %}selected{% endif %}>{{ region }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button class="button button-primary" type="submit">Build weekly brief</button>
+    </form>
+</section>
+
+{% if error %}
+<div class="panel report-error" role="alert">
+    <strong>Report unavailable</strong>
+    <p>{{ error }}</p>
+</div>
+{% endif %}
+
+{% if report %}
+<div class="report-preview-heading">
+    <div>
+        <div class="eyebrow">STOREPULSE · WEEKLY REGIONAL BRIEF</div>
+        <h2>{{ report.region }} region</h2>
+        <p>Week {{ report.week_index }} · {{ report.week_start }} – {{ report.week_end }} · {{ report.stores }} stores reporting</p>
+    </div>
+    <a class="button button-primary" href="{{ url_for('weekly_report_pdf', week_index=report.week_index, region=report.region) }}">
+        Download PDF <span aria-hidden="true">↓</span>
+    </a>
+</div>
+
+<div class="report-kpi-grid">
+    <article class="metric-card"><div class="metric-top"><span>Mentions</span><span class="metric-icon">✳</span></div><div class="metric-value">{{ "{:,}".format(report.mentions) }}</div><div class="metric-foot">Feedback records this week</div></article>
+    <article class="metric-card"><div class="metric-top"><span>Actionable</span><span class="metric-icon">↗</span></div><div class="metric-value">{{ "{:,}".format(report.actionable) }}</div><div class="metric-foot">Model-predicted actionable</div></article>
+    <article class="metric-card"><div class="metric-top"><span>High severity</span><span class="metric-icon danger">!</span></div><div class="metric-value">{{ "{:,}".format(report.high_severity) }}</div><div class="metric-foot">High and critical predictions</div></article>
+    <article class="metric-card"><div class="metric-top"><span>Stores affected</span><span class="metric-icon">⌖</span></div><div class="metric-value">{{ report.stores }}</div><div class="metric-foot">Stores with feedback this week</div></article>
+</div>
+
+<section class="panel report-baseline">
+    <div class="panel-heading"><h3>Baseline check</h3><span>WEEK OVER WEEK</span></div>
+    {% if report.baseline %}
+        {% set change = report.baseline.change %}
+        <p>{{ "{:,}".format(report.mentions) }} mentions this week,
+            {% if change == 0 %}unchanged{% else %}{{ "+" if change > 0 else "" }}{{ change }} mentions ({% if report.baseline.change_percent is not none %}{{ "+" if report.baseline.change_percent > 0 else "" }}{{ "%.0f"|format(report.baseline.change_percent) }}%{% else %}new{% endif %}){% endif %}
+            against the prior-week baseline. Prior week closed on {{ "{:,}".format(report.baseline.mentions) }} mentions across {{ report.baseline.stores }} stores.
+        </p>
+    {% else %}
+        <p>No earlier calendar week is available as a comparison baseline.</p>
+    {% endif %}
+    <p class="panel-note">Policy floors stay visible regardless of mention volume; store spikes compare this week with each store/category’s prior eight-week average.</p>
+</section>
+
+<section class="panel report-section">
+    <div class="panel-heading"><h3>Top issues this week</h3><span>RANKED BY VOLUME & SEVERITY</span></div>
+    <div class="table-scroll">
+        <table class="report-table">
+            <thead><tr><th>#</th><th>ISSUE</th><th>OWNER</th><th>SEVERITY</th><th>THIS WEEK</th><th>PREVIOUS</th><th>CHANGE</th><th>STORES</th></tr></thead>
+            <tbody>
+                {% for issue in report.top_issues %}
+                <tr>
+                    <td>{{ loop.index }}</td><td>{{ issue.issue_type }}</td><td>{{ issue.owner_function }}</td>
+                    <td><span class="pill {{ issue.severity }}">{{ issue.severity|title }}</span></td>
+                    <td>{{ issue.mentions }}</td><td>{{ issue.previous_mentions }}</td>
+                    <td>{% if issue.change > 0 %}+{% endif %}{{ issue.change }}</td><td>{{ issue.stores }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="empty-state">No issue categories are available.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel report-section">
+    <div class="panel-heading"><h3>Store breakdown</h3><span>TOP {{ report.store_breakdown|length }} STORES</span></div>
+    <div class="table-scroll">
+        <table class="report-table">
+            <thead><tr><th>STORE</th><th>MENTIONS</th><th>ACTIONABLE</th><th>HIGH SEVERITY</th></tr></thead>
+            <tbody>
+                {% for store in report.store_breakdown %}
+                <tr><td>{{ store.store_name or store.store_id }}</td><td>{{ store.mentions }}</td><td>{{ store.actionable|int }}</td><td>{{ store.high_severity }}</td></tr>
+                {% else %}
+                <tr><td colspan="4" class="empty-state">No store feedback is available.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel report-section">
+    <div class="panel-heading"><h3>Policy watch · Never deprioritised</h3><span>HIGH / CRITICAL POLICY FLOORS</span></div>
+    <div class="policy-watch-list">
+        {% for issue in report.policy_watch %}
+        <div class="policy-watch-row">
+            <strong>{{ issue.issue_type }}</strong>
+            <span>{{ issue.mentions }} this week · {{ issue.previous_mentions }} previous · {% if issue.change > 0 %}+{% endif %}{{ issue.change }} · floor {{ issue.policy_severity_floor }}</span>
+        </div>
+        {% else %}
+        <p class="empty-state">No high or critical policy floors are configured.</p>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="panel report-section">
+    <div class="panel-heading"><h3>Emerging flags · Early warning</h3><span>8-WEEK STORE BASELINE</span></div>
+    <div class="policy-watch-list">
+        {% for flag in report.emerging_flags %}
+        <div class="emerging-watch-row">
+            <strong>{{ flag.store_name }} · {{ flag.issue_type }}</strong>
+            <span>z {{ "%.1f"|format(flag.z_score) }} · {{ "%.1f"|format(flag.lift) }}× lift · {{ flag.mentions }} this week vs {{ "%.1f"|format(flag.baseline) }} 8-week mean · floor {{ flag.policy_severity_floor }}</span>
+        </div>
+        {% else %}
+        <p class="empty-state">No store/category spikes met the minimum evidence, 3σ and 2× lift thresholds this week.</p>
+        {% endfor %}
+    </div>
+    <p class="panel-note">Rank = mentions × severity weight (critical 2.4, high 1.8, medium 1.35, low 1.0). Model predictions follow taxonomy policy floors. Store spikes require at least 3 mentions, z ≥ 3 and lift ≥ 2×.</p>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Add Data · StorePulse{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">DATA WORKSPACE</div>
+        <h1>Add <span>feedback data</span></h1>
+        <p class="subtitle">Validate a feedback CSV, preview duplicates, and run the local model before adding new records to your workspace.</p>
+    </div>
+</div>
+
+<section class="panel upload-panel">
+    <div class="upload-heading">
+        <div>
+            <div class="eyebrow">SAFE CSV IMPORT</div>
+            <h2>Upload feedback</h2>
+            <p>Your original CSV files are never overwritten. New records and model predictions are appended to local SQLite storage.</p>
+        </div>
+        <span class="local-badge"><span class="status-dot"></span> Local processing</span>
+    </div>
+    <div class="upload-dropzone" id="upload-dropzone">
+        <div class="upload-icon">↑</div>
+        <strong>Choose a feedback CSV file</strong>
+        <p>Required columns: feedback_id, channel, created_at, store_id, rating, text</p>
+        <input id="feedback-upload" type="file" accept=".csv,text/csv">
+        <label class="button button-secondary" for="feedback-upload">Browse files</label>
+        <span id="upload-file-name" class="upload-file-name">No file selected</span>
+    </div>
+    <div class="upload-actions">
+        <button id="preview-upload" class="button button-primary" type="button" disabled>Validate & preview</button>
+        <span id="upload-status" role="status" aria-live="polite"></span>
+    </div>
+    <section id="upload-preview" class="upload-preview" hidden>
+        <div class="upload-preview-summary"></div>
+        <div class="table-scroll">
+            <table class="report-table">
+                <thead><tr><th>FEEDBACK ID</th><th>DATE</th><th>STORE</th><th>CHANNEL</th><th>TEXT PREVIEW</th></tr></thead>
+                <tbody id="upload-preview-rows"></tbody>
+            </table>
+        </div>
+        <button id="process-upload" class="button button-primary" type="button">Classify & add new records</button>
+    </section>
+</section>
+
+<section class="panel translation-config-panel">
+    <div class="eyebrow">LOCAL NLP</div>
+    <h2>Translation models & rules</h2>
+    <p>Feedback is translated only when requested in the inbox. Text is never sent to an external provider; only installed local language pairs are available.</p>
+    <div id="translation-model-status" class="translation-model-status" role="status" aria-live="polite">Checking locally installed translation models…</div>
+    <a class="text-link" href="{{ url_for('feedback_page') }}">Open Feedback Inbox →</a>
+</section>
+
+<section class="panel imports-panel">
+    <div class="panel-heading"><h3>Recent imports</h3><span>LOCAL SQLITE HISTORY</span></div>
+    <div class="table-scroll">
+        <table class="report-table">
+            <thead><tr><th>FILE</th><th>RECORDS ADDED</th><th>IMPORTED</th></tr></thead>
+            <tbody>
+                {% for item in imports %}
+                <tr><td>{{ item.filename }}</td><td>{{ item.records_added }}</td><td>{{ item.imported_at }}</td></tr>
+                {% else %}
+                <tr><td colspan="3" class="empty-state">No feedback files have been imported yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

@@ -39,6 +39,7 @@ htmlcov/
 *.db
 *.sqlite
 *.sqlite3
+*.sqlite3-*
 *.db-journal
 score.json
 FULL_CODE/pipeline/benchmark-results/
@@ -53,3 +54,6 @@ FULL_CODE/pipeline/benchmark-results/
 Thumbs.db
 .idea/
 .vscode/
+
+# Local screen recordings
+*.mp4
